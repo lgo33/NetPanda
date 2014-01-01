@@ -43,7 +43,9 @@ SNAPSHOT = 210
 DISTANCE = 55
 MAXX     = 20
 MAXY     = 15
-
+MAXV	 = 30
+ACC		 = 3.0
+GRAV     = 7.0
 
 class Entity():
     def __init__(self, id=0, pos=Point3(0,DISTANCE,0), vel=Point3(0,0,0), **kwargs):
@@ -126,7 +128,7 @@ class Engine(DirectObject):
             self.initentities()
             self.oldsnapshots = []
             self.players = {}
-        taskMgr.add(self.mainLoop, "EngineMain")
+        taskMgr.add(self.mainLoop, "EngineMain", 1000)
   
     def initentities(self):
         self.playerID = 1
@@ -191,7 +193,7 @@ class Engine(DirectObject):
             self.timeUpdate = 0
             self.time = self.timeUpdate
         else:
-            self.time = globalClock.getRealTime()
+            self.time = globalClock.getRealTime()        
         dt = self.time - self.lasttick
         if dt > self.dt:
             self.lasttick = self.time
@@ -202,13 +204,13 @@ class Engine(DirectObject):
                 else:
                     self.step(0)
             if not self.mode == SERVER:
-                self.gatherInput()
-                if self.nextsnap.time > self.cursnap.time:
-                    self.render()                
+                self.gatherInput()                                
             if (self.time > self.nextsnap.time) and len(self.snapshots):
                 self.cursnap = (self.nextsnap)
                 # l = len(self.snapshots)
                 self.nextsnap = self.snapshots.pop()
+		if not self.mode == SERVER:
+			self.render()
         return Task.cont
 
     def step(self, mode):
@@ -224,9 +226,10 @@ class Engine(DirectObject):
                 ent.vel[0] *= -1.
             if abs(ent.pos[2]) > MAXY: 
                 ent.vel[2] *= -1.
-            acc = 1.5
-            maxv=30.
-            ent.vel[2] -= 3.5 * dt
+            acc = ACC
+            maxv= MAXV
+            grav= GRAV
+            ent.vel[2] -= grav * dt
             if ent.keys[UP]:
                 ent.vel[2] += acc * dt
             elif ent.keys[DOWN]:
@@ -257,14 +260,18 @@ class Engine(DirectObject):
     def test(self, data):
         self.log.debug("dum")
 
-    def render(self):
+    def render(self):        
         dt = self.time - self.cursnap.time
         frac = dt / (self.nextsnap.time - self.cursnap.time)
+        #print "time:", self.time, self.cursnap.time, dt, frac
+        if frac < 0:
+            return
         for id in self.models:
             try:
                 curEnt = self.cursnap.index[id]
                 nextEnt= self.nextsnap.index[id]
                 self.models[id].setPos(curEnt.pos + (nextEnt.pos - curEnt.pos) * frac)
+                #print frac
             except KeyError:
                 self.log.warning("entity missing %d" %id)
 
