@@ -43,9 +43,9 @@ SNAPSHOT = 210
 DISTANCE = 55
 MAXX     = 20
 MAXY     = 15
-MAXV	 = 30
-ACC		 = 3.0
-GRAV     = 7.0
+MAXV	 = 25
+ACC		 = 2.5
+GRAV     = 6.0
 
 class Entity():
     def __init__(self, id=0, pos=Point3(0,DISTANCE,0), vel=Point3(0,0,0), **kwargs):
@@ -114,6 +114,7 @@ class Engine(DirectObject):
         self.nextsnap= Snapshot()
         self.mode = mode
         self.models = {}
+        self.players = {}
         if mode == CLIENT:
             self.lastRecvSnap = 0
         if not mode == LOCAL:
@@ -127,16 +128,17 @@ class Engine(DirectObject):
         else:
             self.initentities()
             self.oldsnapshots = []
-            self.players = {}
+        
         taskMgr.add(self.mainLoop, "EngineMain", 1000)
   
     def initentities(self):
-        self.playerID = 1
+        self.playerID = -1
         self.playerobj = Entity(id = self.playerID, vel=Point3(0.,0.,0.) )
         self.cursnap.addEntity(self.playerobj)
 
     def initmodels(self):
-        self.playerID = 1
+        self.playerID = -1
+        self.addPlayer(self.playerID)
         self.playerobj = Entity(id = self.playerID, vel=Point3(0.,0.,0.) )
         self.models[self.playerID] = self.loadObject("dot")
         self.cursnap.addEntity(self.playerobj)
@@ -174,8 +176,11 @@ class Engine(DirectObject):
 
     def welcomeClient(self, data, id=None):
         self.log.debug("Client connected")
-        self.players[id] = Player(id)
+        self.addPlayer(id)
         self.net.sendDataToID([self.time, self.dtNextSnap, id], id, reliable=True, out_of_line=True, msgtype=INIT)
+        
+    def addPlayer(self, id):
+        self.players[id] = Player(id)
 
     def initClient(self, data):
         servertime = data[0] - (data[1] * self.nBuff)
@@ -277,12 +282,12 @@ class Engine(DirectObject):
 
     def gatherInput(self):
         if self.mode & LOCAL:
-            self.recvKeys([self.time, self.keys])
+            self.recvKeys([self.time, 0, self.keys], id=self.playerID)
         if self.mode == CLIENT:
             self.net.sendToServer([self.time, self.lastRecvSnap, self.keys], msgtype=KEYS, reliable=False)
 
     def recvKeys(self, data, id=id):
-        eid = 1
+        eid = -1
         time = data[0]
         lastsnap = data[1]
         keys = data[2]

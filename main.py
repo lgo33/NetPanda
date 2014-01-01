@@ -26,16 +26,18 @@ class World(DirectObject):
         self.info.setinfo('debug information here')
 #        taskMgr.add(self.info.showtime, "ShowTime")
         taskMgr.add(self.showinfo, "ShowInfo")
+        self.netclient = None
         self.netinit('127.0.0.1', 9099)
 #        self.netinit('adhara.usm.uni-muenchen.de', 8888)
 #        self.engine = Engine(LOCAL)
 
 
     def showinfo(self, task):
-        info = str(self.engine.cursnap.index[1].keys[4]) + " | " + str(len(self.engine.snapshots)) + " " + "%03.1f" % self.engine.time
-        vel = self.engine.cursnap.index[1].vel
+        info = str(self.engine.cursnap.index[self.engine.playerID].keys[4]) + " | " + str(len(self.engine.snapshots)) + " " + "%03.1f" % self.engine.time
+        vel = self.engine.cursnap.index[self.engine.playerID].vel
         info = "%04.1f %04.1f %04.1f" % (vel[0], vel[1], vel[2])
-        info += "%7.3f" % self.netclient.getPing()
+        if self.netclient is not None:
+            info += "%7.3f" % self.netclient.getPing()
         self.info.setinfo(info)
         return Task.again
 
@@ -52,7 +54,7 @@ class World(DirectObject):
         userdata = {}
         userdata['name'] = "Elke2"
         userdata['pw'] = 'secret2'
-        self.netclient = UDPclient(userdata, port ,ip)
+        self.netclient = UDPclient(userdata, port ,ip, commTicks=20)
         self.netclient.handlers[SMSG_CHAT] = self.showchatmsg
         self.netclient.handlers[SMSG] = self.showservermsg
         self.engine = Engine(CLIENT, net=self.netclient)
@@ -67,7 +69,8 @@ class World(DirectObject):
     def quit(self):
 #        self.netclient.disconnect()
         self.log.debug('Exit by User')
-        self.netclient.running = False
+        if self.netclient is not None:
+            self.netclient.running = False
         taskMgr.running = False
         
 
