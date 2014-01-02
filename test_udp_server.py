@@ -63,6 +63,10 @@ class World(DirectObject):
                     print client.id, client.ping
             elif key == 'b':
                 self.server.broadcast(ctime(), msgtype=SMSG)
+            elif key == 'd':
+                print 'disconnecting:'
+                for client in self.server.commBuffer:
+                    self.server.disconnect("", id=client.id)
             elif key == '?':
                 print 'help'
         return Task.cont

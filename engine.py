@@ -44,7 +44,7 @@ DISTANCE = 55
 MAXX     = 20
 MAXY     = 15
 MAXV	 = 25
-ACC		 = 2.5
+ACC	 = 2.5
 GRAV     = 6.0
 
 class Entity():
